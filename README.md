@@ -1,4 +1,4 @@
-# 实验六基础工程：R1 位姿、运动与深度障碍接口
+# 实验六：R1 深度视觉识别与自主绕墙
 
 本工程接续实验五，提供三个基础模块：
 
@@ -6,7 +6,7 @@
 2. 接收统一速度指令，提供带碰撞阻挡的仿真执行层，以及独立的宇树 R1 SDK 真机适配源码。
 3. 将深度图转换为机器人机身坐标系中的障碍点云和左、中、右距离信息。
 
-当前阶段提供接口基础，不包含 Nav2 启动配置、自动绕墙算法、视觉 SLAM 或双足步态控制。仿真中的 R1 保持站姿做平面移动，不能将该效果解释为已实现真实双足行走。真机 SDK 后端与仿真后端分别启动，SDK 不承担 Gazebo 中的步态控制。
+工程现提供教学用自主绕墙状态机和学生 TODO 入口，不包含 Nav2 启动配置、视觉 SLAM 或双足步态控制。仿真中的 R1 保持站姿做平面移动，不能将该效果解释为已实现真实双足行走。真机 SDK 后端与仿真后端分别启动，SDK 不承担 Gazebo 中的步态控制。
 
 ## 环境与实验五衔接
 
@@ -14,11 +14,26 @@
 - 实验五已经构建，`experiment5_depth` 可通过 ROS 包索引找到。
 - 复用实验五安装目录中的 R1 模型、网格、URDF、蓝色墙壁场景和深度桥接配置。
 - 启动时在临时目录生成实验六场景，不修改实验五源码或安装文件。
+- 临时场景保留蓝色墙壁与 R1，单独将地面延长到 16 m × 16 m，使机器人在墙端及目标区域转向观察时仍能得到有效地面深度；平面运动活动边界不变。实验五原世界文件保持原样。
 - 基准参考：[huokumo/experiment5](https://github.com/huokumo/experiment5)，开发时核对的提交为 `807de9e2454d0c6bd7ab3067e6743acf429e19f9`。
 
 ## 部署
 
 将本仓库放在 `/root/exp5/src/experiment6_navigation`。本仓库根目录就是 ROS 2 功能包，不需要在内部再创建同名目录。
+
+如果按教学平台 ZIP 包在独立工作空间 `/root/exp6` 中部署，包目录可以是 `/root/exp6/src/experiment6`；ROS 2 包名仍为 `experiment6_navigation`。实验五资源包位于 `/root/exp6/src/experiment5_depth/experiment5_depth`。解压后先恢复 Python 入口脚本的执行权限，再构建：
+
+```bash
+cd /root/exp6
+chmod +x src/experiment6/scripts/*.py
+source /opt/ros/humble/setup.bash
+colcon build --symlink-install
+source install/setup.bash
+ros2 pkg prefix experiment5_depth
+ros2 pkg prefix experiment6_navigation
+```
+
+若已经用 `--symlink-install` 构建，但启动提示 `pose_node.py not found on the libexec directory`，在源目录执行上述 `chmod +x` 后直接重新启动即可。ZIP 包可能丢失 Git 中的可执行权限；后续发布教学资源包时应保留这些文件的执行权限。本节以下的 `/root/exp5` 命令适用于实验五与实验六共用工作空间的部署方式；独立工作空间应对应改为 `/root/exp6`。
 
 实验五已有的运行依赖继续沿用；另安装插件编译及自定义消息生成依赖：
 
@@ -127,6 +142,28 @@ ros2 run experiment6_navigation drive_for.py --seconds 0.5
 
 位姿应随运动变化，正的 `angular.z` 表示向左转。靠近墙体时，仿真插件按圆形身体占用范围阻挡继续穿墙；这属于执行层碰撞保护，不是自动避障规划。
 
+## 自主绕过蓝色墙壁
+
+先停止手动调试的 `experiment6_interfaces.launch.py`，只启动一个仿真实例、一个 `/r1/cmd_vel` 控制源。教师参考实现：
+
+```bash
+source /opt/ros/humble/setup.bash
+source /root/exp6/install/setup.bash
+ros2 launch experiment6_navigation experiment6_autonomous.launch.py \
+  controller:=reference gui:=true rviz:=true require_depth:=true
+```
+
+默认终点为 `(x=4.2 m, y=0.0 m)`，绕行方向为左。可用 `side:=right`、`goal_x:=...`、`goal_y:=...` 调整。状态从 `/r1/navigation_status` 查看：
+
+```bash
+ros2 topic echo /r1/navigation_status --once
+ros2 topic echo /r1/pose --once
+```
+
+正常状态依次经历 `ADVANCE`、`TURN_SIDE`、`SIDE_ADVANCE`、`TURN_SCAN`、`SCAN`、`CROSS`、`RETURN_GOAL`、`ALIGN_GOAL`、`DONE`。控制器仅订阅公开里程计、障碍汇总和碰撞告警，不读取场景墙体坐标。它先在相机视野中检测墙体，再转向观察侧方、逐段寻找墙端，跨过障碍后回到终点。任一运动方向若障碍不明、距离不足、位姿或深度超时，会输出零速度并等待或进入 `FAILED`；`DONE` 也持续发送零速度。状态机只针对实验五的单块静态墙壁教学场景，不能推断未知场景全局可达性。
+
+学生入口将 `controller:=reference` 改为 `controller:=student`。初始 TODO 版本只发送零速度，学生完成 `experiment6_student/controller.py` 中的四个函数后才能运动。完整步骤与报告要求见 [实验六指导书](docs/EXPERIMENT6_GUIDE.md)。
+
 ## 深度处理规则
 
 1. 订阅实验五的深度 Image 和对应 CameraInfo，检查编码、尺寸、时间及坐标帧。
@@ -145,7 +182,7 @@ ros2 run experiment6_navigation drive_for.py --seconds 0.5
 
 距离是障碍点到 `base_link` 原点的水平距离，单位为米。`CLEAR` 只描述相机实际覆盖的范围、高度和量程，不保证相机视野外或遮挡后的空间可通行。`max_range` 是未检出障碍时的报告上限，不是对整段空间的安全证明。
 
-该相机视场有限，因此仅凭三个距离不能保证完整绕过4 m宽墙体。后续需要加入有记忆的绕行状态、机器人占用范围和目标位置判断，或接 Nav2。
+该相机视场有限，因此仅凭三个距离不能保证完整绕过4 m宽墙体。教学状态机通过转向观察、分段记录侧移距离及终点位置完成当前场景的绕行；对其他墙体形状、动态障碍和未知场景仍需另行设计与验证。
 
 ## 仿真执行层的边界
 

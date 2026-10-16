@@ -77,6 +77,16 @@ def generate_scene(exp5_share, destination, spawn=(0.0, 0.0, 0.0, 0.0),
     if world is None:
         raise ValueError('Experiment 5 world is missing')
     world.set('name', 'experiment6_navigation')
+    # The experiment-5 floor ends at x=+/-6, y=+/-4.  Near the wall end and
+    # goal, depth rays then leave the floor and become invalid.  Extend only
+    # the generated teaching scene's ground plane;
+    # keep the wall, robot, and planar movement bounds exactly as before.
+    floor = world.find("model[@name='floor']")
+    if floor is None:
+        raise ValueError('Experiment 5 floor is missing')
+    for size_node in floor.findall('.//geometry/box/size'):
+        sx, sy, sz = numbers(size_node.text, 3)
+        size_node.text = f'{max(sx,16.0)} {max(sy,16.0)} {sz}'
     if not gui:
         for child in world.findall('gui'):
             world.remove(child)

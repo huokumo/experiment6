@@ -12,5 +12,5 @@ for path in sorted(root.rglob('*.py')):
         ast.parse(path.read_text(encoding='utf-8'),filename=str(path))
 ET.parse(root/'package.xml')
 result=subprocess.run([sys.executable,'-m','unittest','discover','-s','tests',
-                       '-p','test_core.py','-v'],cwd=root)
+                       '-p','test_*.py','-v'],cwd=root)
 raise SystemExit(result.returncode)

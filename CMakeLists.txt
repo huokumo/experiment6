@@ -41,8 +41,10 @@ find_package(std_msgs REQUIRED)
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/ObstacleSummary.msg" DEPENDENCIES std_msgs)
 ament_python_install_package(experiment6_core)
+ament_python_install_package(experiment6_student)
 install(PROGRAMS scripts/pose_node.py scripts/motion_node.py scripts/depth_node.py
-  scripts/drive_for.py DESTINATION lib/${PROJECT_NAME})
+  scripts/drive_for.py scripts/avoidance_node.py scripts/student_avoidance_node.py
+  DESTINATION lib/${PROJECT_NAME})
 install(DIRECTORY launch config docs tools DESTINATION share/${PROJECT_NAME}
   PATTERN __pycache__ EXCLUDE)
 install(FILES README.md LICENSE VALIDATION.md RELEASE_STATUS.json DESTINATION share/${PROJECT_NAME})

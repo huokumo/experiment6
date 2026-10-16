@@ -117,6 +117,8 @@ class SceneContracts(unittest.TestCase):
             robot=world.find("model[@name='r1']")
             self.assertEqual(float(robot.findtext('.//update_rate')),10)
             self.assertEqual(len(robot.findall('plugin/obstacle')),1)
+            floor=world.find("model[@name='floor']")
+            self.assertEqual(floor.findtext('.//geometry/box/size'),'16.0 16.0 0.1')
             self.assertEqual(before,(root/'worlds/depth_camera.world').read_bytes())
 
     def test_overlapping_spawn_is_rejected(self):

@@ -1,20 +1,21 @@
 {
-  "version": "0.1.0",
-  "prepared_on": "2026-10-15",
-  "scope": "Experiment 6 foundation interfaces; no Nav2 planner or biped gait controller",
+  "version": "0.2.0",
+  "prepared_on": "2026-10-16",
+  "scope": "Experiment 6 foundation interfaces, depth-guided wall bypass reference and student TODO; no Nav2 or biped gait controller",
   "experiment5_reference": "807de9e2454d0c6bd7ab3067e6743acf429e19f9",
   "unitree_sdk2_reference": "63096d0ac0c5d2dec9d6e0c22cd5233410ca2f36",
   "simulation_backend": "fixed-standing planar model with conservative swept footprint guard",
   "local_verification": {
-    "python_numerical_tests": {"passed": 16, "failed": 0},
+    "python_numerical_and_navigation_tests": {"passed": 19, "failed": 0},
     "native_ctest_tests": {"passed": 2, "failed": 0},
     "ros_interface_tests": {"passed": 3, "failed": 0},
     "humble_colcon_build": true,
     "full_r1_depth_rendering": true,
     "full_ros_simulation_loop": true,
+    "wall_bypass_reached_goal": true,
     "unitree_adapter_build": true,
     "hardware_disabled_startup_guard": true
   },
-  "not_verified": ["User VM GUI and RViz", "R1 hardware and firmware"],
+  "not_verified": ["Updated autonomous controller on teaching VM", "R1 hardware and firmware"],
   "hardware_commands_sent": false
 }
