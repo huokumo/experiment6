@@ -33,9 +33,13 @@ class StudentNode(Node):
         self.pose_at = time.monotonic()
 
     def on_obstacles(self, message):
-        self.obstacles = Obstacles(message.data_valid, tuple(message.distance_m),
-                                   tuple(message.state))
-        self.obstacles_at = time.monotonic()
+        self.obstacles = Obstacles(
+            message.data_valid,
+            tuple(message.distance_m),
+            tuple(message.state),
+            time.monotonic(),
+        )
+        self.obstacles_at = self.obstacles.received_at
 
     def tick(self):
         now = time.monotonic()
